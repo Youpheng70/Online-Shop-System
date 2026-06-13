@@ -544,6 +544,39 @@ app.get('/api/admin/analytics/summary', async (req, res) => {
   }
 });
 
+// ─── SUPER ADMIN: SALES BY ADMIN ────────────────
+app.get('/api/admin/analytics/by-admin', async (req, res) => {
+  const { period } = req.query;
+  let dateFilter = '';
+  const now = new Date();
+  if (period === 'day') {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    dateFilter = ` AND o."createdAt" >= '${start}'`;
+  } else if (period === 'week') {
+    const d = new Date(now); d.setDate(d.getDate() - d.getDay());
+    dateFilter = ` AND o."createdAt" >= '${d.toISOString()}'`;
+  } else if (period === 'month') {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    dateFilter = ` AND o."createdAt" >= '${start}'`;
+  }
+  try {
+    const result = await pool.query(`
+      SELECT COALESCE(o."approvedBy", 'Unassigned') as admin,
+             COUNT(DISTINCT o.id)::int as orders,
+             COALESCE(SUM(oi.quantity), 0)::int as products,
+             COALESCE(SUM(oi.quantity * oi.price), 0) as revenue
+      FROM orders o
+      JOIN order_items oi ON oi."orderId" = o.id
+      WHERE o.status = 'Completed'${dateFilter}
+      GROUP BY admin
+      ORDER BY revenue DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.json([]);
+  }
+});
+
 // ─── STOCK ──────────────────────────────────────
 app.get('/api/admin/stock', async (req, res) => {
   try {

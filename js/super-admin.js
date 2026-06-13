@@ -340,6 +340,9 @@ async function renderSuperAdminDashboard() {
       </tr>
     `).join('');
 
+    // Render Admin Sales Table
+    await renderAdminSalesTable('all');
+
     // Render Orders Table
     const allOrders = await Orders.getAll();
     const orderTbody = document.getElementById('super-orders-list');
@@ -671,6 +674,37 @@ window.deleteAdmin = async function(userId) {
   } catch (err) {
     Toast.show('Network error', 'error');
   }
+};
+
+// ─── SALES BY ADMIN ──────────────────────────────
+async function renderAdminSalesTable(period) {
+  const tbody = document.getElementById('admin-sales-list');
+  if (!tbody) return;
+  try {
+    const res = await fetch(`/api/admin/analytics/by-admin?period=${period}`);
+    const data = await res.json();
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--text-muted);">No completed sales for this period.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(row => `
+      <tr>
+        <td style="color:white;font-weight:500;">${row.admin}</td>
+        <td style="color:var(--text-secondary);">${row.orders}</td>
+        <td style="color:var(--text-secondary);">${row.products}</td>
+        <td style="color:#2ecc71;font-weight:600;">${formatPrice(parseFloat(row.revenue))}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:30px;color:#ff4757;">Failed to load.</td></tr>';
+  }
+}
+
+window.setAdminSalesPeriod = function(period) {
+  document.querySelectorAll('#admin-sales-period-filter .period-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.period === period);
+  });
+  renderAdminSalesTable(period);
 };
 
 // ─── ORDER MANAGEMENT ──────────────────────────────

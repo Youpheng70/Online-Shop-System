@@ -170,8 +170,13 @@ async function renderAdminDashboard() {
   initAnalytics();
 }
 
+let adminCharts = { revenueChart: null, categoryChart: null };
+
 async function initAnalytics(period) {
   period = period || 'all';
+  // Destroy existing charts
+  Object.values(adminCharts).forEach(c => { if (c) { c.destroy(); } });
+  adminCharts = { revenueChart: null, categoryChart: null };
   // Restore canvases and remove placeholders
   document.querySelectorAll('.chart-container').forEach(container => {
     const canvas = container.querySelector('canvas');
@@ -202,7 +207,7 @@ async function initAnalytics(period) {
     const labels = revData.map(d => d.date);
     const values = revData.map(d => d.revenue);
 
-    new Chart(document.getElementById('revenueChart'), {
+    adminCharts.revenueChart = new Chart(document.getElementById('revenueChart'), {
       type: 'line',
       data: {
         labels: labels,
@@ -236,7 +241,7 @@ async function initAnalytics(period) {
     const catLabels = catData.map(d => d.category);
     const catValues = catData.map(d => d.count);
 
-    new Chart(document.getElementById('categoryChart'), {
+    adminCharts.categoryChart = new Chart(document.getElementById('categoryChart'), {
       type: 'doughnut',
       data: {
         labels: catLabels,

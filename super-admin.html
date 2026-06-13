@@ -83,6 +83,30 @@
         </div>
       </div>
 
+      <!-- Sales by Admin Section -->
+      <h2 style="margin-top: 40px;"><i class="fas fa-user-tie"></i> Sales by Admin</h2>
+      <div class="period-filter" id="admin-sales-period-filter" style="display:flex;gap:8px;margin:10px 0;flex-wrap:wrap;">
+        <button class="period-btn active" data-period="all" onclick="setAdminSalesPeriod('all')">All Time</button>
+        <button class="period-btn" data-period="day" onclick="setAdminSalesPeriod('day')">Today</button>
+        <button class="period-btn" data-period="week" onclick="setAdminSalesPeriod('week')">This Week</button>
+        <button class="period-btn" data-period="month" onclick="setAdminSalesPeriod('month')">This Month</button>
+      </div>
+      <div style="overflow-x: auto;">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Admin</th>
+              <th>Orders Completed</th>
+              <th>Products Sold</th>
+              <th>Revenue</th>
+            </tr>
+          </thead>
+          <tbody id="admin-sales-list">
+            <tr><td colspan="4" style="text-align:center;padding:30px;">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
       <!-- Orders Management Section -->
       <h2 style="margin-top: 40px;"><i class="fas fa-truck"></i> Order Management</h2>
       <div style="overflow-x: auto;">
