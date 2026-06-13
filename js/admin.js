@@ -19,24 +19,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const params = new URLSearchParams(window.location.search);
   filterAdminId = params.get('adminId') || null;
 
-  const titleBar = document.querySelector('.page-title-bar');
-  // Show back button when viewing from super admin switcher
-  if (filterAdminId) {
+  // Show back button for super admin on admin page
+  if (Auth.isSuperAdmin()) {
+    const titleBar = document.querySelector('.page-title-bar');
     if (titleBar) {
       const backLink = document.createElement('a');
       backLink.href = 'super-admin.html';
-      backLink.style.cssText = 'display: inline-block; background: rgba(255,255,255,0.1); color: white; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; text-decoration: none; margin-left: 15px;';
+      backLink.style.cssText = 'display: inline-block; background: #f5a623; color: #000; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; text-decoration: none; margin-left: 15px;';
       backLink.innerHTML = '<i class="fas fa-arrow-left"></i> Back to Super Admin';
       titleBar.querySelector('h1').after(backLink);
-    }
-  } else if (Auth.isSuperAdmin()) {
-    // Show Super Admin link if user is super_admin viewing their own dashboard
-    if (titleBar) {
-      const link = document.createElement('a');
-      link.href = 'super-admin.html';
-      link.style.cssText = 'display: inline-block; margin-left: 15px; background: #f5a623; color: #000; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; text-decoration: none;';
-      link.innerHTML = '<i class="fas fa-crown"></i> Super Admin';
-      titleBar.querySelector('h1').after(link);
     }
   }
 
