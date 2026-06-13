@@ -281,6 +281,69 @@ async function renderSuperAdminDashboard() {
       </tr>
     `).join('');
 
+    // Render Orders Table
+    const allOrders = await Orders.getAll();
+    const orderTbody = document.getElementById('super-orders-list');
+    if (allOrders.length === 0) {
+      orderTbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 30px;">No orders have been placed yet.</td></tr>`;
+    } else {
+      orderTbody.innerHTML = allOrders.map(order => {
+        const ship = order.shippingInfo || {};
+        return `
+        <tr>
+          <td style="font-weight: 700; color: white; font-size: 12px;">${order.id}</td>
+          <td style="font-size: 12px; white-space: nowrap;">${formatDate(order.createdAt)}</td>
+          <td>
+            <div style="color: white; font-size: 13px;">${order.customerName}</div>
+            <div style="font-size: 10px; color: var(--text-muted);">${order.customerEmail}</div>
+          </td>
+          <td style="font-size: 12px; color: var(--text-secondary);">
+            ${(order.items || []).map(item => `
+              <div style="white-space: nowrap; margin-bottom: 2px;">
+                <span style="color: white;">${item.name}</span>
+                <span style="color: var(--text-muted);"> x${item.quantity}</span>
+                ${item.selectedColor ? `<span style="color: var(--accent-purple); font-size: 10px;"> (${item.selectedColor})</span>` : ''}
+                ${item.selectedStorage ? `<span style="color: var(--accent-purple); font-size: 10px;"> ${item.selectedStorage}</span>` : ''}
+              </div>
+            `).join('') || '<span style="color: var(--text-muted);">N/A</span>'}
+          </td>
+          <td style="font-size: 12px; color: var(--text-secondary); max-width: 200px;">
+            <div>${ship.firstName || ''} ${ship.lastName || ''}</div>
+            <div style="font-size: 11px;">${ship.phone || ''}</div>
+            <div style="font-size: 11px; color: var(--text-muted);">${ship.address || ''}</div>
+          </td>
+          <td>
+            ${order.paymentScreenshot ? `
+              <a href="${order.paymentScreenshot}" target="_blank" style="display:inline-block;">
+                <img src="${order.paymentScreenshot}" alt="Payment" style="width:50px;height:50px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,255,255,0.1);transition:transform 0.2s;" onmouseover="this.style.transform='scale(2.5)';this.style.zIndex='10';this.style.position='relative'" onmouseout="this.style.transform='';this.style.zIndex='';this.style.position=''" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
+                <span style="display:none;color:var(--accent-purple);font-size:11px;"><i class="fas fa-image"></i></span>
+              </a>
+            ` : `<span style="color: var(--text-muted); font-size: 11px;">N/A</span>`}
+          </td>
+          <td style="font-weight: 600; color: white;">${formatPrice(order.total)}</td>
+          <td>
+            <span class="order-status ${order.status.toLowerCase()}">${order.status}</span>
+          </td>
+          <td>
+            <div style="display:flex;gap:4px;flex-wrap:nowrap;">
+            ${order.status === 'Processing' ? `
+              <button class="btn-status process" onclick="superUpdateOrderStatus('${order.id}', 'Completed')">
+                <i class="fas fa-check"></i> Complete
+              </button>
+            ` : `
+              <button class="btn-status" style="background:#4a90e2" onclick="superUpdateOrderStatus('${order.id}', 'Processing')">
+                <i class="fas fa-undo"></i> Undo
+              </button>
+            `}
+              <button class="btn-status" style="background:#e74c3c;" onclick="superDeleteOrder('${order.id}')">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `}).join('');
+    }
+
     // Render Products Table
     const products = await fetchProducts();
     const prodTbody = document.getElementById('super-products-list');
@@ -548,5 +611,25 @@ window.deleteAdmin = async function(userId) {
     }
   } catch (err) {
     Toast.show('Network error', 'error');
+  }
+};
+
+// ─── ORDER MANAGEMENT ──────────────────────────────
+window.superUpdateOrderStatus = async function(orderId, newStatus) {
+  const user = Auth.getCurrentUser();
+  const adminId = user ? user.email : undefined;
+  if (await Orders.updateStatus(orderId, newStatus, adminId)) {
+    Toast.show(`Order ${orderId} marked as ${newStatus}`, 'success');
+    renderSuperAdminDashboard();
+  }
+};
+
+window.superDeleteOrder = async function(orderId) {
+  if (!confirm(`Delete order ${orderId}? This cannot be undone.`)) return;
+  if (await Orders.deleteOrder(orderId)) {
+    Toast.show(`Order ${orderId} deleted`, 'success');
+    renderSuperAdminDashboard();
+  } else {
+    Toast.show('Failed to delete order', 'error');
   }
 };
