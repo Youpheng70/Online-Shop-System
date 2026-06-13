@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderSuperAdminDashboard();
 });
 
+// ─── ADMIN FORM TOGGLES ────────────────────────
 function showAddAdminForm() {
   document.getElementById('add-admin-form').style.display = 'block';
 }
@@ -57,12 +58,128 @@ async function createAdmin() {
   }
 }
 
-async function renderSuperAdminDashboard() {
-  try {
-    // Fetch today's analytics
-    const analyticsRes = await fetch('/api/admin/analytics/today');
-    const analytics = await analyticsRes.json();
+// ─── PRODUCT FORM TOGGLES ──────────────────────
+function showAddProductForm() {
+  document.getElementById('edit-product-id').value = '';
+  document.getElementById('product-form-title').textContent = 'Add New Product';
+  document.getElementById('prod-name').value = '';
+  document.getElementById('prod-brand').value = '';
+  document.getElementById('prod-category').value = 'Mobile Phone';
+  document.getElementById('prod-price').value = '';
+  document.getElementById('prod-image').value = '';
+  document.getElementById('prod-section').value = '';
+  document.getElementById('prod-description').value = '';
+  document.getElementById('prod-instock').checked = true;
+  document.getElementById('prod-featured').checked = false;
+  document.getElementById('add-product-form').style.display = 'block';
+  document.getElementById('add-product-msg').textContent = '';
+}
 
+function hideAddProductForm() {
+  document.getElementById('add-product-form').style.display = 'none';
+  document.getElementById('add-product-msg').textContent = '';
+}
+
+function editProduct(product) {
+  document.getElementById('edit-product-id').value = product.id;
+  document.getElementById('product-form-title').textContent = 'Edit Product: ' + product.name;
+  document.getElementById('prod-name').value = product.name || '';
+  document.getElementById('prod-brand').value = product.brand || '';
+  document.getElementById('prod-category').value = product.category || 'Mobile Phone';
+  document.getElementById('prod-price').value = product.price || '';
+  document.getElementById('prod-image').value = product.image || '';
+  document.getElementById('prod-section').value = product.section || '';
+  document.getElementById('prod-description').value = product.description || '';
+  document.getElementById('prod-instock').checked = product.inStock !== false;
+  document.getElementById('prod-featured').checked = product.featured === true;
+  document.getElementById('add-product-form').style.display = 'block';
+  document.getElementById('add-product-msg').textContent = '';
+}
+
+async function saveProduct() {
+  const editId = document.getElementById('edit-product-id').value;
+  const name = document.getElementById('prod-name').value.trim();
+  const brand = document.getElementById('prod-brand').value.trim();
+  const category = document.getElementById('prod-category').value;
+  const price = parseFloat(document.getElementById('prod-price').value);
+  const image = document.getElementById('prod-image').value.trim();
+  const section = document.getElementById('prod-section').value.trim();
+  const description = document.getElementById('prod-description').value.trim();
+  const inStock = document.getElementById('prod-instock').checked;
+  const featured = document.getElementById('prod-featured').checked;
+  const msgEl = document.getElementById('add-product-msg');
+
+  if (!name || !brand || !price) {
+    msgEl.innerHTML = '<span style="color: #ff4757;">Name, brand, and price are required.</span>';
+    return;
+  }
+
+  const body = { name, brand, category, price, image, section, description, inStock, featured };
+
+  try {
+    const url = editId ? `/api/products/${editId}` : '/api/products';
+    const method = editId ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.success) {
+      msgEl.innerHTML = '<span style="color: #28a745;">Product saved successfully!</span>';
+      setTimeout(() => {
+        hideAddProductForm();
+        renderSuperAdminDashboard();
+      }, 800);
+    } else {
+      msgEl.innerHTML = `<span style="color: #ff4757;">${data.message}</span>`;
+    }
+  } catch (err) {
+    msgEl.innerHTML = '<span style="color: #ff4757;">Network error.</span>';
+  }
+}
+
+async function deleteProduct(productId) {
+  if (!confirm('Delete this product? This cannot be undone.')) return;
+  try {
+    const res = await fetch(`/api/products/${productId}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      Toast.show('Product deleted', 'success');
+      renderSuperAdminDashboard();
+    } else {
+      Toast.show(data.message || 'Failed to delete', 'error');
+    }
+  } catch (err) {
+    Toast.show('Network error', 'error');
+  }
+}
+
+// ─── MAIN DASHBOARD RENDER ─────────────────────
+let charts = [];
+
+function destroyCharts() {
+  charts.forEach(c => { try { c.destroy(); } catch(e) {} });
+  charts = [];
+}
+
+async function renderSuperAdminDashboard() {
+  destroyCharts();
+
+  try {
+    const [analyticsRes, productStatsRes, weeklyRes, monthlyRes] = await Promise.all([
+      fetch('/api/admin/analytics/today'),
+      fetch('/api/admin/products/stats'),
+      fetch('/api/admin/analytics/weekly'),
+      fetch('/api/admin/analytics/monthly')
+    ]);
+
+    const analytics = await analyticsRes.json();
+    const productStats = await productStatsRes.json();
+    const weeklyData = await weeklyRes.json();
+    const monthlyData = await monthlyRes.json();
+
+    // Update stat cards
     document.getElementById('stat-today-orders').textContent = analytics.today.orderCount;
     document.getElementById('stat-today-revenue').textContent = formatPrice(analytics.today.totalRevenue);
     document.getElementById('stat-today-profit').textContent = formatPrice(analytics.today.estimatedProfit);
@@ -70,11 +187,17 @@ async function renderSuperAdminDashboard() {
     document.getElementById('stat-total-orders').textContent = analytics.lifetime.totalOrders;
     document.getElementById('stat-lifetime-revenue').textContent = formatPrice(analytics.lifetime.totalRevenue);
     document.getElementById('stat-pending-orders').textContent = analytics.pending;
+    document.getElementById('stat-total-products').textContent = productStats.total;
+
+    // Render Charts
+    renderMonthlyRevenueChart(monthlyData);
+    renderCategoryPieChart(productStats.byCategory);
+    renderStockBarChart(productStats.stockByCategory);
+    renderWeeklyOrdersChart(weeklyData);
 
     // Fetch all users
     const allUsers = await Auth.getUsers();
     const admins = allUsers.filter(u => u.role === 'admin' || u.role === 'super_admin');
-    document.getElementById('stat-total-admins').textContent = admins.length;
 
     // Render Admins Table
     const adminTbody = document.getElementById('admin-list');
@@ -124,7 +247,7 @@ async function renderSuperAdminDashboard() {
     const products = await fetchProducts();
     const prodTbody = document.getElementById('super-products-list');
     if (products.length === 0) {
-      prodTbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 30px;">No products found.</td></tr>`;
+      prodTbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 30px;">No products found.</td></tr>`;
     } else {
       prodTbody.innerHTML = products.map(p => `
         <tr>
@@ -136,12 +259,20 @@ async function renderSuperAdminDashboard() {
           <td style="color: var(--text-secondary);">${p.category}</td>
           <td style="color: white; font-weight: 600;">${formatPrice(p.price)}</td>
           <td>
-            <span style="color: ${p.inStock ? '#2ecc71' : '#e74c3c'};">
+            <span style="color: ${p.inStock ? '#2ecc71' : '#e74c3c'}; font-weight: 600;">
               ${p.inStock ? 'In Stock' : 'Out of Stock'}
             </span>
           </td>
+          <td>${p.featured ? '<span style="color: #f5a623;"><i class="fas fa-star"></i></span>' : '<span style="color: var(--text-muted);">—</span>'}</td>
           <td>
-            ${p.featured ? '<span style="color: #f5a623;"><i class="fas fa-star"></i></span>' : '<span style="color: var(--text-muted);">—</span>'}
+            <div style="display: flex; gap: 4px;">
+              <button class="btn-status" style="background: #4a90e2;" onclick='editProduct(${JSON.stringify(p).replace(/'/g, "\\'")})'>
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn-status" style="background: #e74c3c;" onclick="deleteProduct(${p.id})">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
           </td>
         </tr>
       `).join('');
@@ -152,6 +283,184 @@ async function renderSuperAdminDashboard() {
   }
 }
 
+// ─── CHART RENDERERS ────────────────────────────
+function renderMonthlyRevenueChart(data) {
+  const ctx = document.getElementById('monthlyRevenueChart');
+  if (!ctx) return;
+  const labels = data.map(d => d.month);
+  const revenue = data.map(d => d.revenue);
+  const orders = data.map(d => d.orders);
+
+  charts.push(new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Revenue',
+          data: revenue,
+          backgroundColor: 'rgba(102, 126, 234, 0.7)',
+          borderColor: '#667eea',
+          borderWidth: 1,
+          yAxisID: 'y'
+        },
+        {
+          label: 'Orders',
+          data: orders,
+          backgroundColor: 'rgba(46, 204, 113, 0.7)',
+          borderColor: '#2ecc71',
+          borderWidth: 1,
+          yAxisID: 'y1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: 'white' } }
+      },
+      scales: {
+        x: { ticks: { color: '#a0a0b0' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: {
+          type: 'linear', display: true, position: 'left',
+          ticks: { color: '#a0a0b0', callback: v => '$' + v },
+          grid: { color: 'rgba(255,255,255,0.05)' }
+        },
+        y1: {
+          type: 'linear', display: true, position: 'right',
+          ticks: { color: '#a0a0b0' },
+          grid: { drawOnChartArea: false }
+        }
+      }
+    }
+  }));
+}
+
+function renderCategoryPieChart(data) {
+  const ctx = document.getElementById('categoryPieChart');
+  if (!ctx) return;
+  const colors = ['#667eea', '#2ecc71', '#f5a623', '#e74c3c', '#9b59b6', '#1abc9c'];
+
+  charts.push(new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: data.map(d => d.category),
+      datasets: [{
+        data: data.map(d => d.count),
+        backgroundColor: colors.slice(0, data.length),
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: 'white', padding: 15 }
+        }
+      }
+    }
+  }));
+}
+
+function renderStockBarChart(data) {
+  const ctx = document.getElementById('stockBarChart');
+  if (!ctx) return;
+  const labels = data.map(d => d.category);
+
+  charts.push(new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'In Stock',
+          data: data.map(d => d.in_stock),
+          backgroundColor: 'rgba(46, 204, 113, 0.7)',
+          borderColor: '#2ecc71',
+          borderWidth: 1
+        },
+        {
+          label: 'Out of Stock',
+          data: data.map(d => d.out_of_stock),
+          backgroundColor: 'rgba(231, 76, 60, 0.7)',
+          borderColor: '#e74c3c',
+          borderWidth: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: 'white' } }
+      },
+      scales: {
+        x: { stacked: false, ticks: { color: '#a0a0b0' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { stacked: false, ticks: { color: '#a0a0b0' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  }));
+}
+
+function renderWeeklyOrdersChart(data) {
+  const ctx = document.getElementById('weeklyOrdersChart');
+  if (!ctx) return;
+  const labels = data.map(d => d.date);
+  const orders = data.map(d => d.orders);
+  const revenue = data.map(d => d.revenue);
+
+  charts.push(new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Orders',
+          data: orders,
+          borderColor: '#f5a623',
+          backgroundColor: 'rgba(245, 166, 35, 0.1)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 5,
+          pointBackgroundColor: '#f5a623'
+        },
+        {
+          label: 'Revenue',
+          data: revenue,
+          borderColor: '#667eea',
+          backgroundColor: 'rgba(102, 126, 234, 0.1)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 5,
+          pointBackgroundColor: '#667eea',
+          yAxisID: 'y1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: 'white' } }
+      },
+      scales: {
+        x: { ticks: { color: '#a0a0b0' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: {
+          ticks: { color: '#a0a0b0' },
+          grid: { color: 'rgba(255,255,255,0.05)' }
+        },
+        y1: {
+          position: 'right',
+          ticks: { color: '#a0a0b0', callback: v => '$' + v },
+          grid: { drawOnChartArea: false }
+        }
+      }
+    }
+  }));
+}
+
+// ─── USER / ADMIN ACTIONS ──────────────────────
 async function changeUserRole(userId, newRole) {
   if (!confirm(`Change this user's role to "${newRole}"?`)) return;
   try {

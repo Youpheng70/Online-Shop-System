@@ -39,11 +39,10 @@
         </div>
       </div>
 
-      <!-- Quick Stats -->
       <div class="admin-stats" id="quick-stats">
         <div class="stat-card" style="border-left: 4px solid #667eea;">
           <div class="stat-value" id="stat-total-orders">0</div>
-          <div class="stat-label">Total Orders (All Time)</div>
+          <div class="stat-label">Total Orders</div>
         </div>
         <div class="stat-card" style="border-left: 4px solid #2ecc71;">
           <div class="stat-value" id="stat-lifetime-revenue">$0</div>
@@ -54,8 +53,29 @@
           <div class="stat-label">Pending Orders</div>
         </div>
         <div class="stat-card" style="border-left: 4px solid #f5a623;">
-          <div class="stat-value" id="stat-total-admins">0</div>
-          <div class="stat-label">Total Admins</div>
+          <div class="stat-value" id="stat-total-products">0</div>
+          <div class="stat-label">Total Products</div>
+        </div>
+      </div>
+
+      <!-- Charts Section -->
+      <h2 style="margin-top: 40px;"><i class="fas fa-chart-bar"></i> Analytics Charts</h2>
+      <div class="admin-charts-grid">
+        <div class="chart-container">
+          <h3 class="chart-title">Monthly Revenue (12 Months)</h3>
+          <canvas id="monthlyRevenueChart"></canvas>
+        </div>
+        <div class="chart-container">
+          <h3 class="chart-title">Products by Category</h3>
+          <canvas id="categoryPieChart"></canvas>
+        </div>
+        <div class="chart-container">
+          <h3 class="chart-title">Stock Overview by Category</h3>
+          <canvas id="stockBarChart"></canvas>
+        </div>
+        <div class="chart-container">
+          <h3 class="chart-title">Weekly Orders</h3>
+          <canvas id="weeklyOrdersChart"></canvas>
         </div>
       </div>
 
@@ -118,8 +138,46 @@
         </table>
       </div>
 
-      <!-- Products Overview Section -->
-      <h2 style="margin-top: 40px;"><i class="fas fa-box"></i> Products Overview</h2>
+      <!-- Product Management Section -->
+      <h2 style="margin-top: 40px;"><i class="fas fa-box"></i> Product Management</h2>
+      <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+        <button class="btn-primary" onclick="showAddProductForm()" style="padding: 10px 20px;">
+          <i class="fas fa-plus"></i> Add New Product
+        </button>
+      </div>
+
+      <div id="add-product-form" style="display:none; background: var(--bg-elevated); padding: 20px; border-radius: var(--radius-md); margin-bottom: 20px;">
+        <h3 style="color: white; margin-bottom: 15px;" id="product-form-title">Add New Product</h3>
+        <input type="hidden" id="edit-product-id" value="">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+          <input type="text" id="prod-name" placeholder="Product Name" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+          <input type="text" id="prod-brand" placeholder="Brand" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+          <select id="prod-category" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+            <option value="Mobile Phone">Mobile Phone</option>
+            <option value="Smart Watch">Smart Watch</option>
+            <option value="Accessories">Accessories</option>
+            <option value="SecondHand">SecondHand</option>
+          </select>
+          <input type="number" id="prod-price" placeholder="Price" step="0.01" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+          <input type="text" id="prod-image" placeholder="Image URL" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+          <input type="text" id="prod-section" placeholder="Section (e.g. new-arrival)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+          <textarea id="prod-description" placeholder="Description" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm); grid-column: 1 / -1;"></textarea>
+        </div>
+        <div style="margin-top: 12px; display: flex; gap: 15px; align-items: center;">
+          <label style="color: white; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+            <input type="checkbox" id="prod-instock" checked> In Stock
+          </label>
+          <label style="color: white; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+            <input type="checkbox" id="prod-featured"> Featured
+          </label>
+        </div>
+        <div style="margin-top: 12px; display: flex; gap: 10px;">
+          <button class="btn-primary" onclick="saveProduct()" style="padding: 10px 24px;"><i class="fas fa-save"></i> Save Product</button>
+          <button onclick="hideAddProductForm()" style="padding: 10px 24px; background: rgba(255,255,255,0.1); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer;"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+        <div id="add-product-msg" style="margin-top: 10px;"></div>
+      </div>
+
       <div style="overflow-x: auto;">
         <table class="admin-table">
           <thead>
@@ -131,6 +189,7 @@
               <th>Price</th>
               <th>Stock</th>
               <th>Featured</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody id="super-products-list">
@@ -138,7 +197,6 @@
         </table>
       </div>
 
-      <!-- Admin Panel Link -->
       <div style="margin-top: 40px; text-align: center;">
         <a href="admin.html" style="color: var(--accent-purple); font-size: 14px;">
           <i class="fas fa-arrow-left"></i> Go to Admin Panel

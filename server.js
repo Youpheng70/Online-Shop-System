@@ -222,6 +222,56 @@ app.delete('/api/admin/users/:id', async (req, res) => {
   }
 });
 
+// ─── SUPER ADMIN: REVENUE OVERVIEW ────────────
+app.get('/api/admin/analytics/weekly', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT DATE("createdAt") as date, COUNT(*)::int as orders, COALESCE(SUM(total), 0) as revenue
+      FROM orders
+      WHERE "createdAt" >= CURRENT_DATE - INTERVAL '7 days'
+      GROUP BY date
+      ORDER BY date ASC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/analytics/monthly', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT TO_CHAR(DATE("createdAt"), 'YYYY-MM') as month, COUNT(*)::int as orders, COALESCE(SUM(total), 0) as revenue
+      FROM orders
+      WHERE "createdAt" >= CURRENT_DATE - INTERVAL '12 months'
+      GROUP BY month
+      ORDER BY month ASC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── SUPER ADMIN: PRODUCT STATS ──────────────
+app.get('/api/admin/products/stats', async (req, res) => {
+  try {
+    const totalRes = await pool.query(`SELECT COUNT(*)::int as total FROM products`);
+    const categoryRes = await pool.query(`SELECT category, COUNT(*)::int as count FROM products GROUP BY category`);
+    const stockRes = await pool.query(`SELECT category, COUNT(*)::int as total, SUM(CASE WHEN "inStock" THEN 1 ELSE 0 END)::int as in_stock, SUM(CASE WHEN NOT "inStock" THEN 1 ELSE 0 END)::int as out_of_stock FROM products GROUP BY category`);
+    const recentRes = await pool.query(`SELECT name, price, "inStock" FROM products ORDER BY id DESC LIMIT 5`);
+
+    res.json({
+      total: parseInt(totalRes.rows[0].total),
+      byCategory: categoryRes.rows,
+      stockByCategory: stockRes.rows,
+      recentProducts: recentRes.rows
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── PRODUCTS API ─────────────────────────
 app.get('/api/products', async (req, res) => {
   try {
