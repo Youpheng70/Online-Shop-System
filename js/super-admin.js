@@ -114,7 +114,16 @@ async function saveProduct() {
     return;
   }
 
-  const body = { name, brand, category, price, image, section, description, inStock, featured };
+  // Auto-assign section based on category if not provided
+  const sectionMap = {
+    'Mobile Phone': 'new-arrival',
+    'Smart Watch': 'smart-watch',
+    'Accessories': 'accessories',
+    'SecondHand': 'special-offer'
+  };
+  const finalSection = section || sectionMap[category] || null;
+
+  const body = { name, brand, category, price, image, section: finalSection, description, inStock, featured };
 
   try {
     const url = editId ? `/api/products/${editId}` : '/api/products';
