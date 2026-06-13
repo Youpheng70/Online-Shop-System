@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderHeader();
 
   const user = Auth.getCurrentUser();
-  if (!Auth.isLoggedIn() || (user.role !== 'admin' && user.role !== 'superadmin')) {
+  if (!Auth.isLoggedIn() || (user.role !== 'admin' && user.role !== 'super_admin')) {
     Toast.show('Access Denied. Admins only.', 'error');
     window.location.href = 'index.html';
     return;
@@ -19,9 +19,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const params = new URLSearchParams(window.location.search);
   filterAdminId = params.get('adminId') || null;
 
-  // Show Super Admin link if user is super_admin
-  if (Auth.isSuperAdmin()) {
-    const titleBar = document.querySelector('.page-title-bar');
+  const titleBar = document.querySelector('.page-title-bar');
+  // Show back button when viewing from super admin switcher
+  if (filterAdminId) {
+    if (titleBar) {
+      const backLink = document.createElement('a');
+      backLink.href = 'super-admin.html';
+      backLink.style.cssText = 'display: inline-block; background: rgba(255,255,255,0.1); color: white; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; text-decoration: none; margin-left: 15px;';
+      backLink.innerHTML = '<i class="fas fa-arrow-left"></i> Back to Super Admin';
+      titleBar.querySelector('h1').after(backLink);
+    }
+  } else if (Auth.isSuperAdmin()) {
+    // Show Super Admin link if user is super_admin viewing their own dashboard
     if (titleBar) {
       const link = document.createElement('a');
       link.href = 'super-admin.html';
@@ -81,7 +90,8 @@ async function renderAdminDashboard() {
     document.querySelector('.page-title-bar h1').innerHTML += ` <span style="font-size:14px;color:var(--accent-purple);font-weight:400;">— your sales</span>`;
   }
   if (filterEmail) {
-    allOrders = allOrders.filter(o => o.approvedBy === filterEmail);
+    // Show orders assigned to this admin OR unassigned (pending) orders
+    allOrders = allOrders.filter(o => !o.approvedBy || o.approvedBy === filterEmail);
   }
 
   // Calculate Stats
