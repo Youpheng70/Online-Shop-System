@@ -62,13 +62,10 @@ async function createAdmin() {
 function showAddProductForm() {
   document.getElementById('edit-product-id').value = '';
   document.getElementById('product-form-title').textContent = 'Add New Product';
-  document.getElementById('prod-name').value = '';
-  document.getElementById('prod-brand').value = '';
+  ['prod-name','prod-brand','prod-price','prod-image','prod-section','prod-description','prod-original-price','prod-discount','prod-rating','prod-reviews'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['prod-spec-display','prod-spec-processor','prod-spec-ram','prod-spec-storage','prod-spec-camera','prod-spec-battery','prod-spec-os','prod-spec-weight'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const colorsEl = document.getElementById('prod-colors'); if (colorsEl) colorsEl.value = '';
   document.getElementById('prod-category').value = 'Mobile Phone';
-  document.getElementById('prod-price').value = '';
-  document.getElementById('prod-image').value = '';
-  document.getElementById('prod-section').value = '';
-  document.getElementById('prod-description').value = '';
   document.getElementById('prod-instock').checked = true;
   document.getElementById('prod-featured').checked = false;
   document.getElementById('add-product-form').style.display = 'block';
@@ -90,6 +87,21 @@ function editProduct(product) {
   document.getElementById('prod-image').value = product.image || '';
   document.getElementById('prod-section').value = product.section || '';
   document.getElementById('prod-description').value = product.description || '';
+  document.getElementById('prod-original-price').value = product.originalPrice || '';
+  document.getElementById('prod-discount').value = product.discount || '';
+  document.getElementById('prod-rating').value = product.rating || '';
+  document.getElementById('prod-reviews').value = product.reviews || '';
+  const specs = product.specs || {};
+  document.getElementById('prod-spec-display').value = specs.display || '';
+  document.getElementById('prod-spec-processor').value = specs.processor || '';
+  document.getElementById('prod-spec-ram').value = specs.ram || '';
+  document.getElementById('prod-spec-storage').value = (specs.storage || []).join('/') || '';
+  document.getElementById('prod-spec-camera').value = specs.camera || '';
+  document.getElementById('prod-spec-battery').value = specs.battery || '';
+  document.getElementById('prod-spec-os').value = specs.os || '';
+  document.getElementById('prod-spec-weight').value = specs.weight || '';
+  const colors = product.colors || [];
+  document.getElementById('prod-colors').value = colors.map(c => `${c.name},${c.hex}`).join('\n');
   document.getElementById('prod-instock').checked = product.inStock !== false;
   document.getElementById('prod-featured').checked = product.featured === true;
   document.getElementById('add-product-form').style.display = 'block';
@@ -105,6 +117,10 @@ async function saveProduct() {
   const image = document.getElementById('prod-image').value.trim();
   const section = document.getElementById('prod-section').value.trim();
   const description = document.getElementById('prod-description').value.trim();
+  const originalPrice = parseFloat(document.getElementById('prod-original-price').value) || null;
+  const discount = parseFloat(document.getElementById('prod-discount').value) || 0;
+  const rating = parseFloat(document.getElementById('prod-rating').value) || 0;
+  const reviews = parseInt(document.getElementById('prod-reviews').value) || 0;
   const inStock = document.getElementById('prod-instock').checked;
   const featured = document.getElementById('prod-featured').checked;
   const msgEl = document.getElementById('add-product-msg');
@@ -113,6 +129,24 @@ async function saveProduct() {
     msgEl.innerHTML = '<span style="color: #ff4757;">Name, brand, and price are required.</span>';
     return;
   }
+
+  // Build specs object
+  const specs = {};
+  const specFields = { display: 'prod-spec-display', processor: 'prod-spec-processor', ram: 'prod-spec-ram', camera: 'prod-spec-camera', battery: 'prod-spec-battery', os: 'prod-spec-os', weight: 'prod-spec-weight' };
+  Object.keys(specFields).forEach(key => {
+    const val = document.getElementById(specFields[key]).value.trim();
+    if (val) specs[key] = val;
+  });
+  const storageVal = document.getElementById('prod-spec-storage').value.trim();
+  if (storageVal) specs.storage = storageVal.split('/').map(s => s.trim()).filter(Boolean);
+
+  // Build colors array
+  const colorsText = document.getElementById('prod-colors').value.trim();
+  const colors = colorsText ? colorsText.split('\n').map(line => {
+    const parts = line.split(',').map(s => s.trim());
+    if (parts.length >= 2 && parts[0] && parts[1]) return { name: parts[0], hex: parts[1] };
+    return null;
+  }).filter(Boolean) : [];
 
   // Auto-assign section based on category if not provided
   const sectionMap = {
@@ -123,7 +157,7 @@ async function saveProduct() {
   };
   const finalSection = section || sectionMap[category] || null;
 
-  const body = { name, brand, category, price, image, section: finalSection, description, inStock, featured };
+  const body = { name, brand, category, price, originalPrice, discount, description, specs, colors, rating, reviews, inStock, featured, section: finalSection, image };
 
   try {
     const url = editId ? `/api/products/${editId}` : '/api/products';

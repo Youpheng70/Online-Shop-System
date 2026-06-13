@@ -160,8 +160,29 @@
           </select>
           <input type="number" id="prod-price" placeholder="Price" step="0.01" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
           <input type="text" id="prod-image" placeholder="Image URL" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+          <input type="number" id="prod-original-price" placeholder="Original Price" step="0.01" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+          <input type="number" id="prod-discount" placeholder="Discount $" step="0.01" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+          <input type="number" id="prod-rating" placeholder="Rating (0-5)" step="0.1" min="0" max="5" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+          <input type="number" id="prod-reviews" placeholder="Review Count" step="1" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
           <input type="text" id="prod-section" placeholder="Section (e.g. new-arrival)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
           <textarea id="prod-description" placeholder="Description" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm); grid-column: 1 / -1;"></textarea>
+          <details style="grid-column: 1 / -1; color: var(--text-secondary);" id="specs-details">
+            <summary style="cursor: pointer; font-weight: 600; color: white; margin-bottom: 10px;"><i class="fas fa-cog"></i> Product Specs & Colors (Optional)</summary>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: var(--radius-sm);">
+              <input type="text" id="prod-spec-display" placeholder="Display (e.g. 6.9 OLED)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;">
+              <input type="text" id="prod-spec-processor" placeholder="Processor (e.g. A19 Pro)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;">
+              <input type="text" id="prod-spec-ram" placeholder="RAM (e.g. 12GB)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;">
+              <input type="text" id="prod-spec-storage" placeholder="Storage (e.g. 256GB/512GB)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;">
+              <input type="text" id="prod-spec-camera" placeholder="Camera (e.g. 48MP Main)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;">
+              <input type="text" id="prod-spec-battery" placeholder="Battery (e.g. 5000 mAh)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;">
+              <input type="text" id="prod-spec-os" placeholder="OS (e.g. iOS 19)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;">
+              <input type="text" id="prod-spec-weight" placeholder="Weight (e.g. 227g)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;">
+            </div>
+            <div style="margin-top: 10px;">
+              <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 5px;">Colors (one per line: Name,#hex)</label>
+              <textarea id="prod-colors" placeholder="Black,#000000&#10;White,#FFFFFF&#10;Blue,#4a6fa5" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px; height: 80px;"></textarea>
+            </div>
+          </details>
         </div>
         <div style="margin-top: 12px; display: flex; gap: 15px; align-items: center;">
           <label style="color: white; font-size: 13px; display: flex; align-items: center; gap: 6px;">
