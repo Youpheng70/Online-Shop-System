@@ -64,14 +64,24 @@ async function renderAdminDashboard() {
   renderAdminSkeletons();
   let allOrders = await Orders.getAll();
   const allUsers = await Auth.getUsers();
+  const currentUser = Auth.getCurrentUser();
 
-  // Filter by selected admin if viewing from super admin switcher
+  // Determine which admin to filter by
+  let filterEmail = null;
   if (filterAdminId) {
+    // Super admin viewing a specific admin
     const selectedAdmin = allUsers.find(u => u.id === filterAdminId);
     if (selectedAdmin) {
+      filterEmail = selectedAdmin.email;
       document.querySelector('.page-title-bar h1').innerHTML += ` <span style="font-size:16px;color:var(--accent-purple);font-weight:400;">— viewing as ${selectedAdmin.firstName} ${selectedAdmin.lastName}</span>`;
     }
-    allOrders = allOrders.filter(o => o.approvedBy === selectedAdmin?.email);
+  } else if (currentUser && currentUser.role === 'admin') {
+    // Regular admin: only see their own orders
+    filterEmail = currentUser.email;
+    document.querySelector('.page-title-bar h1').innerHTML += ` <span style="font-size:14px;color:var(--accent-purple);font-weight:400;">— your sales</span>`;
+  }
+  if (filterEmail) {
+    allOrders = allOrders.filter(o => o.approvedBy === filterEmail);
   }
 
   // Calculate Stats
@@ -202,8 +212,11 @@ async function initAnalytics(period) {
     if (ph) ph.remove();
   });
   try {
+    const currentUser = Auth.getCurrentUser();
+    const adminParam = filterAdminId ? `&adminId=${filterAdminId}` : (currentUser && currentUser.role === 'admin' ? `&adminId=${currentUser.email}` : '');
+
     // Load period summary
-    const summaryRes = await fetch(`/api/admin/analytics/summary?period=${period}`);
+    const summaryRes = await fetch(`/api/admin/analytics/summary?period=${period}${adminParam}`);
     const summary = await summaryRes.json();
     document.getElementById('admin-period-sold').textContent = summary.productsSold || 0;
     document.getElementById('admin-period-revenue').textContent = formatPrice(summary.revenue || 0);
