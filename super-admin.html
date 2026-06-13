@@ -113,19 +113,20 @@
         </button>
       </div>
       <div id="add-admin-form" style="display:none; background: var(--bg-elevated); padding: 20px; border-radius: var(--radius-md); margin-bottom: 20px;">
-        <h3 style="color: white; margin-bottom: 15px;">Create Admin Account</h3>
+        <h3 style="color: white; margin-bottom: 15px;" id="admin-form-title">Create Admin Account</h3>
+        <input type="hidden" id="edit-admin-id" value="">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
           <input type="text" id="new-admin-firstname" placeholder="First Name" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
           <input type="text" id="new-admin-lastname" placeholder="Last Name" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
           <input type="email" id="new-admin-email" placeholder="Email" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
-          <input type="password" id="new-admin-password" placeholder="Password" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+          <input type="password" id="new-admin-password" placeholder="Password (leave blank to keep)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
           <select id="new-admin-role" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
             <option value="admin">Admin</option>
             <option value="super_admin">Super Admin</option>
           </select>
         </div>
         <div style="margin-top: 12px; display: flex; gap: 10px;">
-          <button class="btn-primary" onclick="createAdmin()" style="padding: 10px 24px;"><i class="fas fa-save"></i> Create</button>
+          <button class="btn-primary" onclick="createAdmin()" style="padding: 10px 24px;" id="admin-form-submit-btn"><i class="fas fa-save"></i> Create</button>
           <button onclick="hideAddAdminForm()" style="padding: 10px 24px; background: rgba(255,255,255,0.1); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer;"><i class="fas fa-times"></i> Cancel</button>
         </div>
         <div id="add-admin-msg" style="margin-top: 10px;"></div>

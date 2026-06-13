@@ -12,7 +12,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ─── ADMIN FORM TOGGLES ────────────────────────
 function showAddAdminForm() {
+  document.getElementById('edit-admin-id').value = '';
+  document.getElementById('admin-form-title').textContent = 'Create Admin Account';
+  document.getElementById('admin-form-submit-btn').innerHTML = '<i class="fas fa-save"></i> Create';
+  ['new-admin-firstname','new-admin-lastname','new-admin-email'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('new-admin-password').value = '';
+  document.getElementById('new-admin-role').value = 'admin';
   document.getElementById('add-admin-form').style.display = 'block';
+  document.getElementById('add-admin-msg').textContent = '';
 }
 
 function hideAddAdminForm() {
@@ -20,7 +27,26 @@ function hideAddAdminForm() {
   document.getElementById('add-admin-msg').textContent = '';
 }
 
+window.editAdmin = function(userId) {
+  const admins = JSON.parse(document.getElementById('admin-list').dataset.admins || '[]');
+  const user = admins.find(u => u.id === userId);
+  if (!user) return;
+
+  document.getElementById('edit-admin-id').value = user.id;
+  document.getElementById('admin-form-title').textContent = 'Edit Admin: ' + user.firstName + ' ' + user.lastName;
+  document.getElementById('admin-form-submit-btn').innerHTML = '<i class="fas fa-save"></i> Update';
+  document.getElementById('new-admin-firstname').value = user.firstName || '';
+  document.getElementById('new-admin-lastname').value = user.lastName || '';
+  document.getElementById('new-admin-email').value = user.email || '';
+  document.getElementById('new-admin-password').value = '';
+  document.getElementById('new-admin-password').placeholder = 'Leave blank to keep current';
+  document.getElementById('new-admin-role').value = user.role || 'admin';
+  document.getElementById('add-admin-msg').textContent = '';
+  document.getElementById('add-admin-form').style.display = 'block';
+};
+
 async function createAdmin() {
+  const editId = document.getElementById('edit-admin-id').value;
   const firstName = document.getElementById('new-admin-firstname').value.trim();
   const lastName = document.getElementById('new-admin-lastname').value.trim();
   const email = document.getElementById('new-admin-email').value.trim();
@@ -28,33 +54,60 @@ async function createAdmin() {
   const role = document.getElementById('new-admin-role').value;
   const msgEl = document.getElementById('add-admin-msg');
 
-  if (!firstName || !lastName || !email || !password) {
-    msgEl.innerHTML = '<span style="color: #ff4757;">Please fill in all fields.</span>';
+  if (!firstName || !lastName || !email) {
+    msgEl.innerHTML = '<span style="color: #ff4757;">First Name, Last Name, and Email are required.</span>';
     return;
   }
 
-  try {
-    const res = await fetch('/api/admin/admins', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ firstName, lastName, email, password, role })
-    });
-    const data = await res.json();
-    if (data.success) {
-      msgEl.innerHTML = '<span style="color: #28a745;">Admin created successfully!</span>';
-      document.getElementById('new-admin-firstname').value = '';
-      document.getElementById('new-admin-lastname').value = '';
-      document.getElementById('new-admin-email').value = '';
-      document.getElementById('new-admin-password').value = '';
-      setTimeout(() => {
-        hideAddAdminForm();
-        renderSuperAdminDashboard();
-      }, 1000);
-    } else {
-      msgEl.innerHTML = `<span style="color: #ff4757;">${data.message}</span>`;
+  if (editId) {
+    // Update existing admin
+    const body = { firstName, lastName, email, role };
+    if (password) body.password = password;
+    try {
+      const res = await fetch(`/api/admin/users/${editId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (data.success) {
+        msgEl.innerHTML = '<span style="color: #28a745;">Admin updated successfully!</span>';
+        setTimeout(() => { hideAddAdminForm(); renderSuperAdminDashboard(); }, 1000);
+      } else {
+        msgEl.innerHTML = `<span style="color: #ff4757;">${data.message}</span>`;
+      }
+    } catch (err) {
+      msgEl.innerHTML = '<span style="color: #ff4757;">Network error.</span>';
     }
-  } catch (err) {
-    msgEl.innerHTML = '<span style="color: #ff4757;">Network error.</span>';
+  } else {
+    // Create new admin
+    if (!password) {
+      msgEl.innerHTML = '<span style="color: #ff4757;">Password is required for new admin.</span>';
+      return;
+    }
+    try {
+      const res = await fetch('/api/admin/admins', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName, lastName, email, password, role })
+      });
+      const data = await res.json();
+      if (data.success) {
+        msgEl.innerHTML = '<span style="color: #28a745;">Admin created successfully!</span>';
+        document.getElementById('new-admin-firstname').value = '';
+        document.getElementById('new-admin-lastname').value = '';
+        document.getElementById('new-admin-email').value = '';
+        document.getElementById('new-admin-password').value = '';
+        setTimeout(() => {
+          hideAddAdminForm();
+          renderSuperAdminDashboard();
+        }, 1000);
+      } else {
+        msgEl.innerHTML = `<span style="color: #ff4757;">${data.message}</span>`;
+      }
+    } catch (err) {
+      msgEl.innerHTML = '<span style="color: #ff4757;">Network error.</span>';
+    }
   }
 }
 
@@ -239,6 +292,7 @@ async function renderSuperAdminDashboard() {
 
     // Render Admins Table
     const adminTbody = document.getElementById('admin-list');
+    adminTbody.dataset.admins = JSON.stringify(admins);
     adminTbody.innerHTML = admins.map(user => `
       <tr>
         <td style="color: white;">${user.firstName} ${user.lastName} ${user.role === 'super_admin' ? '<span style="background: #f5a623; color: #000; font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600;">SUPER</span>' : ''}</td>
@@ -250,11 +304,16 @@ async function renderSuperAdminDashboard() {
         </td>
         <td style="color: var(--text-secondary); font-size: 12px;">${user.createdAt ? formatDate(user.createdAt) : 'N/A'}</td>
         <td>
-          ${user.role !== 'super_admin' ? `
-            <button class="btn-status" style="background: #e74c3c;" onclick="deleteAdmin('${user.id}')">
-              <i class="fas fa-trash"></i> Remove
+          <div style="display:flex;gap:4px;">
+            <button class="btn-status" style="background:#4a90e2;" onclick="editAdmin('${user.id}')">
+              <i class="fas fa-edit"></i> Edit
             </button>
-          ` : '<span style="color: var(--text-muted); font-size: 11px;">—</span>'}
+            ${user.role !== 'super_admin' ? `
+              <button class="btn-status" style="background: #e74c3c;" onclick="deleteAdmin('${user.id}')">
+                <i class="fas fa-trash"></i> Remove
+              </button>
+            ` : ''}
+          </div>
         </td>
       </tr>
     `).join('');
