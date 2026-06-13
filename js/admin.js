@@ -78,11 +78,11 @@ async function renderAdminDashboard() {
   // Determine which admin to filter by
   let filterEmail = null;
   if (filterAdminId) {
-    // Super admin viewing a specific admin
-    const selectedAdmin = allUsers.find(u => u.id === filterAdminId);
+    // Super admin viewing a specific admin (id from URL is string, db id is number)
+    const selectedAdmin = allUsers.find(u => String(u.id) === filterAdminId);
     if (selectedAdmin) {
       filterEmail = selectedAdmin.email;
-      document.querySelector('.page-title-bar h1').innerHTML += ` <span style="font-size:16px;color:var(--accent-purple);font-weight:400;">— viewing as ${selectedAdmin.firstName} ${selectedAdmin.lastName}</span>`;
+      document.querySelector('.page-title-bar h1').innerHTML += ` <span style="font-size:16px;color:var(--accent-purple);font-weight:400;">— viewing ${selectedAdmin.firstName} ${selectedAdmin.lastName}</span>`;
     }
   } else if (currentUser && currentUser.role === 'admin') {
     // Regular admin: only see their own orders
@@ -223,7 +223,15 @@ async function initAnalytics(period) {
   });
   try {
     const currentUser = Auth.getCurrentUser();
-    const adminParam = filterAdminId ? `&adminId=${filterAdminId}` : (currentUser && currentUser.role === 'admin' ? `&adminId=${currentUser.email}` : '');
+    let analyticsEmail = '';
+    if (filterAdminId) {
+      const allUsers = await Auth.getUsers();
+      const sel = allUsers.find(u => String(u.id) === filterAdminId);
+      if (sel) analyticsEmail = sel.email;
+    } else if (currentUser && currentUser.role === 'admin') {
+      analyticsEmail = currentUser.email;
+    }
+    const adminParam = analyticsEmail ? `&adminId=${analyticsEmail}` : '';
 
     // Load period summary
     const summaryRes = await fetch(`/api/admin/analytics/summary?period=${period}${adminParam}`);
