@@ -290,6 +290,9 @@ async function renderSuperAdminDashboard() {
     const allUsers = await Auth.getUsers();
     const admins = allUsers.filter(u => u.role === 'admin' || u.role === 'super_admin');
 
+    // Save for admin switcher dropdown
+    adminAccountsList = admins;
+
     // Render Admins Table
     const adminTbody = document.getElementById('admin-list');
     adminTbody.dataset.admins = JSON.stringify(admins);
@@ -675,6 +678,37 @@ window.deleteAdmin = async function(userId) {
     Toast.show('Network error', 'error');
   }
 };
+
+// ─── ADMIN ACCOUNT SWITCHER ─────────────────────
+let adminAccountsList = [];
+
+window.toggleAdminDropdown = function() {
+  const dropdown = document.getElementById('admin-account-dropdown');
+  if (dropdown.style.display === 'block') {
+    dropdown.style.display = 'none';
+    return;
+  }
+  if (!adminAccountsList.length) {
+    dropdown.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:13px;">No admins found.</div>';
+    dropdown.style.display = 'block';
+    return;
+  }
+  dropdown.innerHTML = adminAccountsList.filter(u => u.role === 'admin' || u.role === 'super_admin').map(u => `
+    <a href="admin.html?adminId=${u.id}" style="display:block;padding:10px 16px;color:white;text-decoration:none;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.05);text-align:left;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background=''">
+      <strong>${u.firstName} ${u.lastName}</strong>
+      <span style="display:block;font-size:11px;color:var(--text-muted);">${u.email} — ${u.role === 'super_admin' ? 'Super Admin' : 'Admin'}</span>
+    </a>
+  `).join('');
+  dropdown.style.display = 'block';
+};
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  const dropdown = document.getElementById('admin-account-dropdown');
+  if (dropdown && !e.target.closest('#admin-account-dropdown') && !e.target.closest('[onclick*="toggleAdminDropdown"]')) {
+    dropdown.style.display = 'none';
+  }
+});
 
 // ─── SALES BY ADMIN ──────────────────────────────
 async function renderAdminSalesTable(period) {

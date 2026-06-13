@@ -270,9 +270,13 @@
       </div>
 
       <div style="margin-top: 40px; text-align: center;">
-        <a href="admin.html" style="color: var(--accent-purple); font-size: 14px;">
-          <i class="fas fa-arrow-left"></i> Go to Admin Panel
-        </a>
+        <div style="display: inline-block; position: relative;">
+          <button onclick="toggleAdminDropdown()" style="background: var(--accent-purple); color: white; border: none; padding: 10px 24px; border-radius: var(--radius-sm); cursor: pointer; font-size: 14px;">
+            <i class="fas fa-arrow-left"></i> Go to Admin Panel <i class="fas fa-chevron-down" style="font-size:10px;margin-left:6px;"></i>
+          </button>
+          <div id="admin-account-dropdown" style="display:none; position: absolute; bottom: 110%; left: 0; right: 0; background: var(--bg-elevated); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-sm); overflow: hidden; z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
+          </div>
+        </div>
       </div>
     </div>
   </main>

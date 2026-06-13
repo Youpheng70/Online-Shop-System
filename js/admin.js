@@ -3,6 +3,7 @@
 // ============================================================
 
 let currentPeriod = 'all';
+let filterAdminId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   renderHeader();
@@ -13,6 +14,10 @@ document.addEventListener('DOMContentLoaded', () => {
     window.location.href = 'index.html';
     return;
   }
+
+  // Check for adminId filter from query param (super admin switching)
+  const params = new URLSearchParams(window.location.search);
+  filterAdminId = params.get('adminId') || null;
 
   // Show Super Admin link if user is super_admin
   if (Auth.isSuperAdmin()) {
@@ -57,8 +62,17 @@ function renderAdminSkeletons() {
 
 async function renderAdminDashboard() {
   renderAdminSkeletons();
-  const allOrders = await Orders.getAll();
+  let allOrders = await Orders.getAll();
   const allUsers = await Auth.getUsers();
+
+  // Filter by selected admin if viewing from super admin switcher
+  if (filterAdminId) {
+    const selectedAdmin = allUsers.find(u => u.id === filterAdminId);
+    if (selectedAdmin) {
+      document.querySelector('.page-title-bar h1').innerHTML += ` <span style="font-size:16px;color:var(--accent-purple);font-weight:400;">— viewing as ${selectedAdmin.firstName} ${selectedAdmin.lastName}</span>`;
+    }
+    allOrders = allOrders.filter(o => o.approvedBy === selectedAdmin?.email);
+  }
 
   // Calculate Stats
   const totalOrders = allOrders.length;
