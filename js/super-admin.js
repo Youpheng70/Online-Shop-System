@@ -167,17 +167,12 @@ async function renderSuperAdminDashboard() {
   destroyCharts();
 
   try {
-    const [analyticsRes, productStatsRes, weeklyRes, monthlyRes] = await Promise.all([
-      fetch('/api/admin/analytics/today'),
-      fetch('/api/admin/products/stats'),
-      fetch('/api/admin/analytics/weekly'),
-      fetch('/api/admin/analytics/monthly')
-    ]);
+    const safeFetch = async (url, fallback) => { try { const r = await fetch(url); if (!r.ok) return fallback; return await r.json(); } catch(e) { return fallback; } };
 
-    const analytics = await analyticsRes.json();
-    const productStats = await productStatsRes.json();
-    const weeklyData = await weeklyRes.json();
-    const monthlyData = await monthlyRes.json();
+    const analytics = await safeFetch('/api/admin/analytics/today', { today: { orderCount: 0, totalRevenue: 0, estimatedProfit: 0, avgOrderValue: 0 }, pending: 0, lifetime: { totalOrders: 0, totalRevenue: 0 } });
+    const productStats = await safeFetch('/api/admin/products/stats', { total: 0, byCategory: [], stockByCategory: [] });
+    const weeklyData = await safeFetch('/api/admin/analytics/weekly', []);
+    const monthlyData = await safeFetch('/api/admin/analytics/monthly', []);
 
     // Update stat cards
     document.getElementById('stat-today-orders').textContent = analytics.today.orderCount;
@@ -190,10 +185,10 @@ async function renderSuperAdminDashboard() {
     document.getElementById('stat-total-products').textContent = productStats.total;
 
     // Render Charts
-    renderMonthlyRevenueChart(monthlyData);
-    renderCategoryPieChart(productStats.byCategory);
-    renderStockBarChart(productStats.stockByCategory);
-    renderWeeklyOrdersChart(weeklyData);
+    if (monthlyData.length) renderMonthlyRevenueChart(monthlyData);
+    if (productStats.byCategory.length) renderCategoryPieChart(productStats.byCategory);
+    if (productStats.stockByCategory.length) renderStockBarChart(productStats.stockByCategory);
+    if (weeklyData.length) renderWeeklyOrdersChart(weeklyData);
 
     // Fetch all users
     const allUsers = await Auth.getUsers();

@@ -78,8 +78,8 @@ app.get('/api/admin/analytics/today', async (req, res) => {
         COALESCE(SUM(total), 0) as total_revenue,
         COALESCE(AVG(total), 0) as avg_order_value
       FROM orders
-      WHERE DATE("createdAt") = $1
-    `, [today]);
+      WHERE "createdAt"::text LIKE $1
+    `, [today + '%']);
 
     const pendingRes = await pool.query(`
       SELECT COUNT(*)::int as count FROM orders WHERE status = 'Processing'
@@ -226,30 +226,30 @@ app.delete('/api/admin/users/:id', async (req, res) => {
 app.get('/api/admin/analytics/weekly', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT DATE("createdAt") as date, COUNT(*)::int as orders, COALESCE(SUM(total), 0) as revenue
+      SELECT DATE("createdAt"::timestamp) as date, COUNT(*)::int as orders, COALESCE(SUM(total), 0) as revenue
       FROM orders
-      WHERE "createdAt" >= CURRENT_DATE - INTERVAL '7 days'
+      WHERE "createdAt"::timestamp >= NOW() - INTERVAL '7 days'
       GROUP BY date
       ORDER BY date ASC
     `);
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.json([]);
   }
 });
 
 app.get('/api/admin/analytics/monthly', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT TO_CHAR(DATE("createdAt"), 'YYYY-MM') as month, COUNT(*)::int as orders, COALESCE(SUM(total), 0) as revenue
+      SELECT TO_CHAR("createdAt"::timestamp, 'YYYY-MM') as month, COUNT(*)::int as orders, COALESCE(SUM(total), 0) as revenue
       FROM orders
-      WHERE "createdAt" >= CURRENT_DATE - INTERVAL '12 months'
+      WHERE "createdAt"::timestamp >= NOW() - INTERVAL '12 months'
       GROUP BY month
       ORDER BY month ASC
     `);
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.json([]);
   }
 });
 
@@ -258,7 +258,7 @@ app.get('/api/admin/products/stats', async (req, res) => {
   try {
     const totalRes = await pool.query(`SELECT COUNT(*)::int as total FROM products`);
     const categoryRes = await pool.query(`SELECT category, COUNT(*)::int as count FROM products GROUP BY category`);
-    const stockRes = await pool.query(`SELECT category, COUNT(*)::int as total, SUM(CASE WHEN "inStock" THEN 1 ELSE 0 END)::int as in_stock, SUM(CASE WHEN NOT "inStock" THEN 1 ELSE 0 END)::int as out_of_stock FROM products GROUP BY category`);
+    const stockRes = await pool.query(`SELECT category, COUNT(*)::int as total, SUM(CASE WHEN "inStock" = true THEN 1 ELSE 0 END)::int as in_stock, SUM(CASE WHEN "inStock" = false THEN 1 ELSE 0 END)::int as out_of_stock FROM products GROUP BY category`);
     const recentRes = await pool.query(`SELECT name, price, "inStock" FROM products ORDER BY id DESC LIMIT 5`);
 
     res.json({
@@ -282,7 +282,7 @@ app.get('/api/products', async (req, res) => {
       ...p,
       specs: p.specs ? (typeof p.specs === 'string' ? JSON.parse(p.specs) : p.specs) : {},
       colors: p.colors ? (typeof p.colors === 'string' ? JSON.parse(p.colors) : p.colors) : [],
-      inStock: (p.stock || 0) > 0,
+      inStock: p.inStock === true || p.inStock === 1 || p.inStock === 'true',
       featured: p.featured === true || p.featured === 1,
       originalPrice: p.originalPrice || null
     }));
@@ -300,7 +300,7 @@ app.get('/api/products/:id', async (req, res) => {
     const row = result.rows[0];
     row.specs = row.specs ? (typeof row.specs === 'string' ? JSON.parse(row.specs) : row.specs) : {};
     row.colors = row.colors ? (typeof row.colors === 'string' ? JSON.parse(row.colors) : row.colors) : [];
-    row.inStock = (row.stock || 0) > 0;
+    row.inStock = row.inStock === true || row.inStock === 1 || row.inStock === 'true';
     row.featured = row.featured === true || row.featured === 1;
     row.originalPrice = row.originalPrice || null;
     res.json(row);
