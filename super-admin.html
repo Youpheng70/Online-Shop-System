@@ -14,6 +14,10 @@
   <main class="main-content">
     <div class="page-title-bar">
       <h1><i class="fas fa-crown" style="color: #f5a623;"></i> Super Admin Dashboard</h1>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <a href="admin.html" style="color:var(--accent-purple);font-size:13px;text-decoration:none;"><i class="fas fa-shield-alt"></i> Admin Panel</a>
+        <a href="index.html" style="color:var(--accent-purple);font-size:13px;text-decoration:none;"><i class="fas fa-home"></i> Back to Site</a>
+      </div>
     </div>
 
     <div class="admin-page">
@@ -39,11 +43,10 @@
         </div>
       </div>
 
-      <!-- Quick Stats -->
       <div class="admin-stats" id="quick-stats">
         <div class="stat-card" style="border-left: 4px solid #667eea;">
           <div class="stat-value" id="stat-total-orders">0</div>
-          <div class="stat-label">Total Orders (All Time)</div>
+          <div class="stat-label">Total Orders</div>
         </div>
         <div class="stat-card" style="border-left: 4px solid #2ecc71;">
           <div class="stat-value" id="stat-lifetime-revenue">$0</div>
@@ -54,9 +57,76 @@
           <div class="stat-label">Pending Orders</div>
         </div>
         <div class="stat-card" style="border-left: 4px solid #f5a623;">
-          <div class="stat-value" id="stat-total-admins">0</div>
-          <div class="stat-label">Total Admins</div>
+          <div class="stat-value" id="stat-total-products">0</div>
+          <div class="stat-label">Total Products</div>
         </div>
+      </div>
+
+      <!-- Charts Section -->
+      <h2 style="margin-top: 40px;"><i class="fas fa-chart-bar"></i> Analytics Charts</h2>
+      <div class="admin-charts-grid">
+        <div class="chart-container">
+          <h3 class="chart-title">Monthly Revenue (12 Months)</h3>
+          <canvas id="monthlyRevenueChart"></canvas>
+        </div>
+        <div class="chart-container">
+          <h3 class="chart-title">Products by Category</h3>
+          <canvas id="categoryPieChart"></canvas>
+        </div>
+        <div class="chart-container">
+          <h3 class="chart-title">Stock Overview by Category</h3>
+          <canvas id="stockBarChart"></canvas>
+        </div>
+        <div class="chart-container">
+          <h3 class="chart-title">Weekly Orders</h3>
+          <canvas id="weeklyOrdersChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Sales by Admin Section -->
+      <h2 style="margin-top: 40px;"><i class="fas fa-user-tie"></i> Sales by Admin</h2>
+      <div class="period-filter" id="admin-sales-period-filter" style="display:flex;gap:8px;margin:10px 0;flex-wrap:wrap;">
+        <button class="period-btn active" data-period="all" onclick="setAdminSalesPeriod('all')">All Time</button>
+        <button class="period-btn" data-period="day" onclick="setAdminSalesPeriod('day')">Today</button>
+        <button class="period-btn" data-period="week" onclick="setAdminSalesPeriod('week')">This Week</button>
+        <button class="period-btn" data-period="month" onclick="setAdminSalesPeriod('month')">This Month</button>
+      </div>
+      <div style="overflow-x: auto;">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Admin</th>
+              <th>Orders Completed</th>
+              <th>Products Sold</th>
+              <th>Revenue</th>
+            </tr>
+          </thead>
+          <tbody id="admin-sales-list">
+            <tr><td colspan="4" style="text-align:center;padding:30px;">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Orders Management Section -->
+      <h2 style="margin-top: 40px;"><i class="fas fa-truck"></i> Order Management</h2>
+      <div style="overflow-x: auto;">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Date</th>
+              <th>Customer</th>
+              <th>Items</th>
+              <th>Shipping</th>
+              <th>Payment</th>
+              <th>Total</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="super-orders-list">
+          </tbody>
+        </table>
       </div>
 
       <!-- Manage Admins Section -->
@@ -67,19 +137,20 @@
         </button>
       </div>
       <div id="add-admin-form" style="display:none; background: var(--bg-elevated); padding: 20px; border-radius: var(--radius-md); margin-bottom: 20px;">
-        <h3 style="color: white; margin-bottom: 15px;">Create Admin Account</h3>
+        <h3 style="color: white; margin-bottom: 15px;" id="admin-form-title">Create Admin Account</h3>
+        <input type="hidden" id="edit-admin-id" value="">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
           <input type="text" id="new-admin-firstname" placeholder="First Name" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
           <input type="text" id="new-admin-lastname" placeholder="Last Name" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
           <input type="email" id="new-admin-email" placeholder="Email" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
-          <input type="password" id="new-admin-password" placeholder="Password" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+          <input type="password" id="new-admin-password" placeholder="Password (leave blank to keep)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
           <select id="new-admin-role" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
             <option value="admin">Admin</option>
             <option value="superadmin">Super Admin</option>
           </select>
         </div>
         <div style="margin-top: 12px; display: flex; gap: 10px;">
-          <button class="btn-primary" onclick="createAdmin()" style="padding: 10px 24px;"><i class="fas fa-save"></i> Create</button>
+          <button class="btn-primary" onclick="createAdmin()" style="padding: 10px 24px;" id="admin-form-submit-btn"><i class="fas fa-save"></i> Create</button>
           <button onclick="hideAddAdminForm()" style="padding: 10px 24px; background: rgba(255,255,255,0.1); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer;"><i class="fas fa-times"></i> Cancel</button>
         </div>
         <div id="add-admin-msg" style="margin-top: 10px;"></div>
@@ -118,8 +189,67 @@
         </table>
       </div>
 
-      <!-- Products Overview Section -->
-      <h2 style="margin-top: 40px;"><i class="fas fa-box"></i> Products Overview</h2>
+      <!-- Product Management Section -->
+      <h2 style="margin-top: 40px;"><i class="fas fa-box"></i> Product Management</h2>
+      <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+        <button class="btn-primary" onclick="showAddProductForm()" style="padding: 10px 20px;">
+          <i class="fas fa-plus"></i> Add New Product
+        </button>
+      </div>
+
+      <div id="add-product-form" style="display:none; background: var(--bg-elevated); padding: 20px; border-radius: var(--radius-md); margin-bottom: 20px;">
+        <h3 style="color: white; margin-bottom: 15px;" id="product-form-title">Add New Product</h3>
+        <input type="hidden" id="edit-product-id" value="">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+          <input type="text" id="prod-name" placeholder="Product Name" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+          <input type="text" id="prod-brand" placeholder="Brand" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+          <select id="prod-category" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+            <option value="Mobile Phone">Mobile Phone</option>
+            <option value="Smart Watch">Smart Watch</option>
+            <option value="Accessories">Accessories</option>
+            <option value="SecondHand">SecondHand</option>
+          </select>
+          <input type="number" id="prod-price" placeholder="Price" step="0.01" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+          <input type="text" id="prod-image" placeholder="Image URL" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+          <input type="number" id="prod-original-price" placeholder="Original Price" step="0.01" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+          <input type="number" id="prod-discount" placeholder="Discount $" step="0.01" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+          <input type="number" id="prod-rating" placeholder="Rating (0-5)" step="0.1" min="0" max="5" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+          <input type="number" id="prod-reviews" placeholder="Review Count" step="1" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+          <input type="text" id="prod-section" placeholder="Section (e.g. new-arrival)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm);">
+          <textarea id="prod-description" placeholder="Description" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: var(--radius-sm); grid-column: 1 / -1;"></textarea>
+          <details style="grid-column: 1 / -1; color: var(--text-secondary);" id="specs-details">
+            <summary style="cursor: pointer; font-weight: 600; color: white; margin-bottom: 10px;"><i class="fas fa-cog"></i> Product Specs & Colors (Optional)</summary>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: var(--radius-sm);">
+              <input type="text" id="prod-spec-display" placeholder="Display (e.g. 6.9 OLED)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;">
+              <input type="text" id="prod-spec-processor" placeholder="Processor (e.g. A19 Pro)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;">
+              <input type="text" id="prod-spec-ram" placeholder="RAM (e.g. 12GB)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;">
+              <input type="text" id="prod-spec-storage" placeholder="Storage (e.g. 256GB/512GB)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;">
+              <input type="text" id="prod-spec-camera" placeholder="Camera (e.g. 48MP Main)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;">
+              <input type="text" id="prod-spec-battery" placeholder="Battery (e.g. 5000 mAh)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;">
+              <input type="text" id="prod-spec-os" placeholder="OS (e.g. iOS 19)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;">
+              <input type="text" id="prod-spec-weight" placeholder="Weight (e.g. 227g)" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px;">
+            </div>
+            <div style="margin-top: 10px;">
+              <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 5px;">Colors (one per line: Name,#hex)</label>
+              <textarea id="prod-colors" placeholder="Black,#000000&#10;White,#FFFFFF&#10;Blue,#4a6fa5" class="form-input" style="background: var(--bg-primary); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px; height: 80px;"></textarea>
+            </div>
+          </details>
+        </div>
+        <div style="margin-top: 12px; display: flex; gap: 15px; align-items: center;">
+          <label style="color: white; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+            <input type="checkbox" id="prod-instock" checked> In Stock
+          </label>
+          <label style="color: white; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+            <input type="checkbox" id="prod-featured"> Featured
+          </label>
+        </div>
+        <div style="margin-top: 12px; display: flex; gap: 10px;">
+          <button class="btn-primary" onclick="saveProduct()" style="padding: 10px 24px;"><i class="fas fa-save"></i> Save Product</button>
+          <button onclick="hideAddProductForm()" style="padding: 10px 24px; background: rgba(255,255,255,0.1); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer;"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+        <div id="add-product-msg" style="margin-top: 10px;"></div>
+      </div>
+
       <div style="overflow-x: auto;">
         <table class="admin-table">
           <thead>
@@ -131,6 +261,7 @@
               <th>Price</th>
               <th>Stock</th>
               <th>Featured</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody id="super-products-list">
@@ -138,11 +269,14 @@
         </table>
       </div>
 
-      <!-- Admin Panel Link -->
       <div style="margin-top: 40px; text-align: center;">
-        <a href="admin.html" style="color: var(--accent-purple); font-size: 14px;">
-          <i class="fas fa-arrow-left"></i> Go to Admin Panel
-        </a>
+        <div style="display: inline-block; position: relative;">
+          <button onclick="toggleAdminDropdown()" style="background: var(--accent-purple); color: white; border: none; padding: 10px 24px; border-radius: var(--radius-sm); cursor: pointer; font-size: 14px;">
+            <i class="fas fa-arrow-left"></i> Go to Admin Panel <i class="fas fa-chevron-down" style="font-size:10px;margin-left:6px;"></i>
+          </button>
+          <div id="admin-account-dropdown" style="display:none; position: absolute; bottom: 110%; left: 0; right: 0; background: var(--bg-elevated); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-sm); overflow: hidden; z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
+          </div>
+        </div>
       </div>
     </div>
   </main>

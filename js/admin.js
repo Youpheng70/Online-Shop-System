@@ -3,26 +3,31 @@
 // ============================================================
 
 let currentPeriod = 'all';
+let filterAdminId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   renderHeader();
 
   const user = Auth.getCurrentUser();
-  if (!Auth.isLoggedIn() || (user.role !== 'admin' && user.role !== 'superadmin')) {
+  if (!Auth.isLoggedIn() || (user.role !== 'admin' && user.role !== 'super_admin')) {
     Toast.show('Access Denied. Admins only.', 'error');
     window.location.href = 'index.html';
     return;
   }
 
-  // Show Super Admin link if user is superadmin
+  // Check for adminId filter from query param (super admin switching)
+  const params = new URLSearchParams(window.location.search);
+  filterAdminId = params.get('adminId') || null;
+
+  // Show back button for super admin on admin page
   if (Auth.isSuperAdmin()) {
     const titleBar = document.querySelector('.page-title-bar');
     if (titleBar) {
-      const link = document.createElement('a');
-      link.href = 'superadmin.html';
-      link.style.cssText = 'display: inline-block; margin-left: 15px; background: #f5a623; color: #000; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; text-decoration: none;';
-      link.innerHTML = '<i class="fas fa-crown"></i> Super Admin';
-      titleBar.querySelector('h1').after(link);
+      const backLink = document.createElement('a');
+      backLink.href = 'super-admin.html';
+      backLink.style.cssText = 'display: inline-block; background: #f5a623; color: #000; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; text-decoration: none; margin-left: 15px;';
+      backLink.innerHTML = '<i class="fas fa-arrow-left"></i> Back to Super Admin';
+      titleBar.querySelector('h1').after(backLink);
     }
   }
 
@@ -63,8 +68,28 @@ function renderAdminSkeletons() {
 
 async function renderAdminDashboard() {
   renderAdminSkeletons();
-  const allOrders = await Orders.getAll();
+  let allOrders = await Orders.getAll();
   const allUsers = await Auth.getUsers();
+  const currentUser = Auth.getCurrentUser();
+
+  // Determine which admin to filter by
+  let filterEmail = null;
+  if (filterAdminId) {
+    // Super admin viewing a specific admin (id from URL is string, db id is number)
+    const selectedAdmin = allUsers.find(u => String(u.id) === filterAdminId);
+    if (selectedAdmin) {
+      filterEmail = selectedAdmin.email;
+      document.querySelector('.page-title-bar h1').innerHTML += ` <span style="font-size:16px;color:var(--accent-purple);font-weight:400;">— viewing ${selectedAdmin.firstName} ${selectedAdmin.lastName}</span>`;
+    }
+  } else if (currentUser && currentUser.role === 'admin') {
+    // Regular admin: only see their own orders
+    filterEmail = currentUser.email;
+    document.querySelector('.page-title-bar h1').innerHTML += ` <span style="font-size:14px;color:var(--accent-purple);font-weight:400;">— your sales</span>`;
+  }
+  if (filterEmail) {
+    // Show orders assigned to this admin OR unassigned (pending) orders
+    allOrders = allOrders.filter(o => !o.approvedBy || o.approvedBy === filterEmail);
+  }
 
   // Calculate Stats
   const totalOrders = allOrders.length;
@@ -177,8 +202,13 @@ async function renderAdminDashboard() {
   initAnalytics();
 }
 
+let adminCharts = { revenueChart: null, categoryChart: null };
+
 async function initAnalytics(period) {
   period = period || 'all';
+  // Destroy existing charts
+  Object.values(adminCharts).forEach(c => { if (c) { c.destroy(); } });
+  adminCharts = { revenueChart: null, categoryChart: null };
   // Restore canvases and remove placeholders
   document.querySelectorAll('.chart-container').forEach(container => {
     const canvas = container.querySelector('canvas');
@@ -190,8 +220,19 @@ async function initAnalytics(period) {
     if (ph) ph.remove();
   });
   try {
+    const currentUser = Auth.getCurrentUser();
+    let analyticsEmail = '';
+    if (filterAdminId) {
+      const allUsers = await Auth.getUsers();
+      const sel = allUsers.find(u => String(u.id) === filterAdminId);
+      if (sel) analyticsEmail = sel.email;
+    } else if (currentUser && currentUser.role === 'admin') {
+      analyticsEmail = currentUser.email;
+    }
+    const adminParam = analyticsEmail ? `&adminId=${analyticsEmail}` : '';
+
     // Load period summary
-    const summaryRes = await fetch(`/api/admin/analytics/summary?period=${period}`);
+    const summaryRes = await fetch(`/api/admin/analytics/summary?period=${period}${adminParam}`);
     const summary = await summaryRes.json();
     document.getElementById('admin-period-sold').textContent = summary.productsSold || 0;
     document.getElementById('admin-period-revenue').textContent = formatPrice(summary.revenue || 0);
@@ -209,7 +250,7 @@ async function initAnalytics(period) {
     const labels = revData.map(d => d.date);
     const values = revData.map(d => d.revenue);
 
-    new Chart(document.getElementById('revenueChart'), {
+    adminCharts.revenueChart = new Chart(document.getElementById('revenueChart'), {
       type: 'line',
       data: {
         labels: labels,
@@ -243,7 +284,7 @@ async function initAnalytics(period) {
     const catLabels = catData.map(d => d.category);
     const catValues = catData.map(d => d.count);
 
-    new Chart(document.getElementById('categoryChart'), {
+    adminCharts.categoryChart = new Chart(document.getElementById('categoryChart'), {
       type: 'doughnut',
       data: {
         labels: catLabels,

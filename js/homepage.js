@@ -35,6 +35,7 @@ async function initHomepage() {
   renderSkeletons('new-arrivals-grid', 8);
   renderSkeletons('smart-watches-grid', 4);
   renderSkeletons('accessories-grid', 4);
+  renderSkeletons('latest-products-grid', 4);
 
   // Fetch products from API
   const products = await fetchProducts();
@@ -45,8 +46,19 @@ async function initHomepage() {
   renderProductSection(products, 'smart-watch', 'smart-watches-grid', 4);
   renderProductSection(products, 'accessories', 'accessories-grid', 4);
 
+  // Latest products (reverse: newest first, no section filter)
+  const latestContainer = document.getElementById('latest-products-grid');
+  if (latestContainer) {
+    const latest = [...products].reverse().slice(0, 4);
+    if (latest.length === 0) {
+      latestContainer.innerHTML = '<p style="color: var(--text-secondary);">No products yet.</p>';
+    } else {
+      latestContainer.innerHTML = latest.map(p => createProductCard(p)).join('');
+    }
+  }
+
   // Observe rendered product cards for scroll reveal
-  ['special-offers-grid', 'new-arrivals-grid', 'smart-watches-grid', 'accessories-grid'].forEach(id => addRevealToGrid(`#${id}`));
+  ['special-offers-grid', 'new-arrivals-grid', 'smart-watches-grid', 'accessories-grid', 'latest-products-grid'].forEach(id => addRevealToGrid(`#${id}`));
 }
 
 // ─── HERO CAROUSEL LOGIC ──────────────────────────────────────

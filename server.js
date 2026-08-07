@@ -88,8 +88,8 @@ app.get('/api/admin/analytics/today', async (req, res) => {
         COALESCE(SUM(total), 0) as total_revenue,
         COALESCE(AVG(total), 0) as avg_order_value
       FROM orders
-      WHERE DATE("createdAt") = $1
-    `, [today]);
+      WHERE "createdAt"::text LIKE $1
+    `, [today + '%']);
 
     const pendingRes = await pool.query(`
       SELECT COUNT(*)::int as count FROM orders WHERE status = 'Processing'
@@ -262,6 +262,56 @@ app.post('/api/products/upload-image', productUpload.single('image'), async (req
   }
 });
 
+// ─── SUPER ADMIN: REVENUE OVERVIEW ────────────
+app.get('/api/admin/analytics/weekly', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT DATE("createdAt"::timestamp) as date, COUNT(*)::int as orders, COALESCE(SUM(total), 0) as revenue
+      FROM orders
+      WHERE "createdAt"::timestamp >= NOW() - INTERVAL '7 days'
+      GROUP BY date
+      ORDER BY date ASC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.json([]);
+  }
+});
+
+app.get('/api/admin/analytics/monthly', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT TO_CHAR("createdAt"::timestamp, 'YYYY-MM') as month, COUNT(*)::int as orders, COALESCE(SUM(total), 0) as revenue
+      FROM orders
+      WHERE "createdAt"::timestamp >= NOW() - INTERVAL '12 months'
+      GROUP BY month
+      ORDER BY month ASC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.json([]);
+  }
+});
+
+// ─── SUPER ADMIN: PRODUCT STATS ──────────────
+app.get('/api/admin/products/stats', async (req, res) => {
+  try {
+    const totalRes = await pool.query(`SELECT COUNT(*)::int as total FROM products`);
+    const categoryRes = await pool.query(`SELECT category, COUNT(*)::int as count FROM products GROUP BY category`);
+    const stockRes = await pool.query(`SELECT category, COUNT(*)::int as total, SUM(CASE WHEN "inStock" = true THEN 1 ELSE 0 END)::int as in_stock, SUM(CASE WHEN "inStock" = false THEN 1 ELSE 0 END)::int as out_of_stock FROM products GROUP BY category`);
+    const recentRes = await pool.query(`SELECT name, price, "inStock" FROM products ORDER BY id DESC LIMIT 5`);
+
+    res.json({
+      total: parseInt(totalRes.rows[0].total),
+      byCategory: categoryRes.rows,
+      stockByCategory: stockRes.rows,
+      recentProducts: recentRes.rows
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── PRODUCTS API ─────────────────────────
 app.get('/api/products', async (req, res) => {
   try {
@@ -272,7 +322,7 @@ app.get('/api/products', async (req, res) => {
       ...p,
       specs: p.specs ? (typeof p.specs === 'string' ? JSON.parse(p.specs) : p.specs) : {},
       colors: p.colors ? (typeof p.colors === 'string' ? JSON.parse(p.colors) : p.colors) : [],
-      inStock: (p.stock || 0) > 0,
+      inStock: p.inStock === true || p.inStock === 1 || p.inStock === 'true',
       featured: p.featured === true || p.featured === 1,
       originalPrice: p.originalPrice || null
     }));
@@ -290,7 +340,7 @@ app.get('/api/products/:id', async (req, res) => {
     const row = result.rows[0];
     row.specs = row.specs ? (typeof row.specs === 'string' ? JSON.parse(row.specs) : row.specs) : {};
     row.colors = row.colors ? (typeof row.colors === 'string' ? JSON.parse(row.colors) : row.colors) : [];
-    row.inStock = (row.stock || 0) > 0;
+    row.inStock = row.inStock === true || row.inStock === 1 || row.inStock === 'true';
     row.featured = row.featured === true || row.featured === 1;
     row.originalPrice = row.originalPrice || null;
     res.json(row);
@@ -546,6 +596,39 @@ app.get('/api/admin/analytics/summary', async (req, res) => {
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── SUPER ADMIN: SALES BY ADMIN ────────────────
+app.get('/api/admin/analytics/by-admin', async (req, res) => {
+  const { period } = req.query;
+  let dateFilter = '';
+  const now = new Date();
+  if (period === 'day') {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    dateFilter = ` AND o."createdAt" >= '${start}'`;
+  } else if (period === 'week') {
+    const d = new Date(now); d.setDate(d.getDate() - d.getDay());
+    dateFilter = ` AND o."createdAt" >= '${d.toISOString()}'`;
+  } else if (period === 'month') {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    dateFilter = ` AND o."createdAt" >= '${start}'`;
+  }
+  try {
+    const result = await pool.query(`
+      SELECT COALESCE(o."approvedBy", 'Unassigned') as admin,
+             COUNT(DISTINCT o.id)::int as orders,
+             COALESCE(SUM(oi.quantity), 0)::int as products,
+             COALESCE(SUM(oi.quantity * oi.price), 0) as revenue
+      FROM orders o
+      JOIN order_items oi ON oi."orderId" = o.id
+      WHERE o.status = 'Completed'${dateFilter}
+      GROUP BY admin
+      ORDER BY revenue DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.json([]);
   }
 });
 
